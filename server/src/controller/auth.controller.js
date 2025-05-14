@@ -1,9 +1,10 @@
 import { db } from "../config/firebase.config.js";
+import { SignToken } from "../util/jwt.util.js";
 import { sendResponse } from "../util/response.util.js";
 import bcrypt from "bcrypt";
-import dotenc from "dotenv"
+import dotenc from "dotenv";
 
-dotenc.config()
+dotenc.config();
 
 const registerController = async (req, res) => {
   try {
@@ -33,13 +34,17 @@ const registerController = async (req, res) => {
         success: false,
       });
     } else {
-      const hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT_ROUND, 10));
+      const hashedPassword = await bcrypt.hash(
+        password,
+        parseInt(process.env.SALT_ROUND, 10)
+      );
 
       await db.collection("users").add({
         name,
         email,
         role,
         password: hashedPassword,
+        isfirstlogin: true,
         createdAt: new Date(),
       });
 
@@ -64,4 +69,72 @@ const registerController = async (req, res) => {
   }
 };
 
-export { registerController };
+const loginController = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    if (!email || !password) {
+      return sendResponse({
+        data: null,
+        message: "Insufficient data to process",
+        res,
+        status: 400,
+        success: false,
+      });
+    }
+
+    const user = await db.collection("users").where("email", "==", email).get();
+
+    if (user.empty) {
+      return sendResponse({
+        data: null,
+        message: "user not registered",
+        res,
+        status: 200,
+        success: false,
+      });
+    }
+
+    const snap = user.docs[0];
+    const document = { id: snap.id, ...snap.data() };
+
+    if (await bcrypt.compare(password, document.password)) {
+      const token = SignToken(document);
+
+      delete document.password;
+
+      return res
+        .status(200)
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 24 * 60 * 60 * 1000,
+        })
+        .json({
+          data: document,
+          message: "login success",
+          success: true,
+        });
+    } else {
+      return sendResponse({
+        data: null,
+        message: "incorrect password",
+        res,
+        status: 200,
+        success: true,
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    return sendResponse({
+      data: null,
+      message: "something went wrong",
+      res,
+      status: 500,
+      success: false,
+    });
+  }
+};
+
+export { registerController, loginController };
