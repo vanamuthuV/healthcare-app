@@ -1,5 +1,6 @@
 import { db } from "../config/firebase.config.js";
 import { sendResponse } from "../util/response.util.js";
+import { Timestamp } from "firebase-admin/firestore";
 
 const addAppointment = async (req, res) => {
   const { id, role } = req.user;
@@ -23,8 +24,8 @@ const addAppointment = async (req, res) => {
       time,
       reason,
       status: "PENDING",
-      createdAt: new Date().toISOString,
-      updatedAt: new Date().toISOString,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     });
 
     return sendResponse({
@@ -35,8 +36,8 @@ const addAppointment = async (req, res) => {
         time,
         reason,
         status: "PENDING",
-        createdAt: new Date().toISOString,
-        updatedAt: new Date().toISOString,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
       },
       message: "appointment addedd successfully",
       res,
@@ -223,9 +224,93 @@ const getAllPatients = async (req, res) => {
   }
 };
 
+const updateAppointment = async (req, res) => {
+  const { appointmentId } = req.params;
+  const updates = req.body;
+  const { id: userId, role } = req.user;
+
+  if (!appointmentId) {
+    return sendResponse({
+      data: null,
+      message: "appointment id is requried",
+      res,
+      status: 400,
+      success: false,
+    });
+  }
+
+  try {
+    const appointmentRef = db.collection("appointments").doc(appointmentId);
+    const appointmentDoc = await appointmentRef.get();
+
+    if (!appointmentDoc.exists) {
+      return sendResponse({
+        data: null,
+        message: "appointment not found",
+        res,
+        status: 404,
+        success: false,
+      });
+    }
+
+    const appointment = appointmentDoc.data();
+
+    const isPatient = appointment.patientId === userId && role === "PATIENT";
+    const isDoctor = appointment.doctorId === userId && role === "DOCTOR";
+    if (!isPatient && !isDoctor) {
+      return sendResponse({
+        data: null,
+        message: "you are not authorized to update this appointment",
+        res,
+        status: 403,
+        success: false,
+      });
+    }
+
+    const allowedFields = ["date", "time", "reason"];
+    const invalidFields = Object.keys(updates).filter(
+      (field) => !allowedFields.includes(field)
+    );
+
+    if (invalidFields.length > 0) {
+      return sendResponse({
+        data: null,
+        message: `Invalid fields: ${invalidFields.join(", ")}`,
+        res,
+        status: 400,
+        success: false,
+      });
+    }
+
+    updates.updatedAt = new Date().toISOString();
+
+    await appointmentRef.update(updates);
+
+    return sendResponse({
+      data: null,
+      message: "appointment updated successfully",
+      res,
+      status: 200,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error updating appointment:", error);
+    return sendResponse({
+      data: null,
+      message: "failed to update appointment",
+      res,
+      status: 500,
+      success: false,
+    });
+  }
+};
+
+
+
 export {
   addAppointment,
   getAppointmentsPatient,
   getPatientProfileWithAppointments,
   getAllPatients,
+  updateAppointment
 };

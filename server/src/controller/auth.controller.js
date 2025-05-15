@@ -8,7 +8,7 @@ dotenc.config();
 
 const registerController = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, specialization } = req.body;
 
     if (!name || !email || !password || !role) {
       return sendResponse({
@@ -44,13 +44,14 @@ const registerController = async (req, res) => {
         email,
         role,
         password: hashedPassword,
+        specialization: specialization ? specialization : null,
         isfirstlogin: true,
         createdAt: new Date(),
       });
 
       return sendResponse({
         data: null,
-        message: `Dear ${name}, registeration is success`,
+        message: `Dear ${name}, registeration is success, please login`,
         res,
         status: 200,
         success: true,
@@ -137,4 +138,36 @@ const loginController = async (req, res) => {
   }
 };
 
-export { registerController, loginController };
+const Me = async (req, res) => {
+  if (!req.user) {
+    return sendResponse({
+      data: null,
+      message: "user not authenticated",
+      res,
+      status: 403,
+      success: false,
+    });
+  }
+
+  return sendResponse({
+    data: req.user,
+    message: "session restored",
+    res,
+    status: 200,
+    success: true,
+  });
+};
+
+const Logout = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax", // or "strict" if you're not using cross-site
+  });
+
+  return res
+    .status(200)
+    .json({ success: true, message: "Logged out successfully" });
+};
+
+export { registerController, loginController, Me, Logout };

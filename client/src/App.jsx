@@ -1,20 +1,44 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/landing";
 import Login from "./pages/login";
-// import Register from "./pages/Register";
+import RegistrationForm from "./pages/registration";
 import DoctorDashboard from "./pages/doctor";
 import PatientDashboard from "./pages/patient";
+import { useUser } from "./hooks/userUser";
+import ProtectedRoute from "./util/protectedRotue";
 
 function App() {
+  const { userdata, setUserData } = useUser();
+
   return (
-    <BrowserRouter>
+    <>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/patient" element={<PatientDashboard />} />
-        <Route path="/doctor" element={<DoctorDashboard />} />
+        <Route path="/register" element={<RegistrationForm />} />
+
+        <Route
+          path="/patient"
+          element={
+            <ProtectedRoute allowedRoles={["PATIENT"]}>
+              <PatientDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* <Route path="/patient" element={<PatientDashboard />} /> */}
+
+        <Route
+          path="/doctor"
+          element={
+            <ProtectedRoute allowedRoles={["DOCTOR"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* <Route path="/doctor" element={<DoctorDashboard />} /> */}
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
 

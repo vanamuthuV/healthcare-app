@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -43,6 +41,7 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import AppHeader from "./appheader";
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -59,6 +58,8 @@ const PatientDashboard = () => {
   const [searchText, setSearchText] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [activeTab, setActiveTab] = useState("upcoming");
+
+  const [msg, contextHolder] = message.useMessage();
 
   const { userdata } = useUser();
   const patientId = userdata?.id;
@@ -78,7 +79,7 @@ const PatientDashboard = () => {
         setFilteredAppointments(response?.data?.data || []);
         setDoctors(doctorsRes.data.data || []);
       } catch (err) {
-        message.error("Error fetching patient data.");
+        msg.error("Error fetching patient data.", 3);
       } finally {
         setLoading(false);
       }
@@ -130,37 +131,43 @@ const PatientDashboard = () => {
       const { date, time, reason } = values;
 
       const payload = {
-        doctorId: selectedAppointment.doctorId,
+        // doctorId: selectedAppointment.doctorId,
         date: date.format("DD-MM-YYYY"),
         time: time.format("h A"),
         reason,
       };
 
-      await api.put(
-        `/appointment/${selectedAppointment.id}/reschedule`,
+      console.log(payload);
+
+      const response = await api.patch(
+        `/patient/${selectedAppointment.id}`,
         payload
       );
 
-      setAppointments((prev) =>
-        prev.map((appt) =>
-          appt.id === selectedAppointment.id
-            ? {
-                ...appt,
-                date: payload.date,
-                time: payload.time,
-                reason: payload.reason,
-                status: "PENDING",
-              }
-            : appt
-        )
-      );
+      if (response?.data?.success) {
+        setAppointments((prev) =>
+          prev.map((appt) =>
+            appt.id === selectedAppointment.id
+              ? {
+                  ...appt,
+                  date: payload.date,
+                  time: payload.time,
+                  reason: payload.reason,
+                  status: "PENDING",
+                }
+              : appt
+          )
+        );
 
-      message.success("Appointment rescheduled successfully.");
-      setRescheduleModalOpen(false);
-      rescheduleForm.resetFields();
-      setSelectedAppointment(null);
+        msg.success("Appointment rescheduled successfully.", 3);
+        setRescheduleModalOpen(false);
+        rescheduleForm.resetFields();
+        setSelectedAppointment(null);
+      } else {
+        msg.error(response?.data?.message, 3);
+      }
     } catch (error) {
-      message.error("Failed to reschedule appointment.");
+      msg.error("Failed to reschedule appointment.", 3);
     }
   };
 
@@ -177,7 +184,7 @@ const PatientDashboard = () => {
         status: "PENDING",
       };
 
-      const response = await api.post("/appointment", payload);
+      const response = await api.post("/patient", payload);
 
       if (response?.data?.success) {
         const newAppointment = {
@@ -187,14 +194,15 @@ const PatientDashboard = () => {
         };
 
         setAppointments((prev) => [...prev, newAppointment]);
-        message.success("Appointment booked successfully!");
+        msg.success("Appointment booked successfully!", 3);
         setBookModalOpen(false);
         bookForm.resetFields();
       } else {
-        message.error(response?.data?.message || "Failed to book appointment.");
+        msg.error(response?.data?.message || "Failed to book appointment.", 3);
       }
     } catch (error) {
-      message.error("Failed to book appointment.");
+      console.log(error.message);
+      msg.error("Failed to book appointment.", 3);
     }
   };
 
@@ -266,7 +274,6 @@ const PatientDashboard = () => {
         <div className="flex gap-2">
           {appointment.status.toLowerCase() !== "cancelled" && (
             <>
-             
               <Button
                 type="primary"
                 ghost
@@ -307,7 +314,7 @@ const PatientDashboard = () => {
 
     return (
       <Card
-        className="rounded-xl shadow-md border-0"
+        className="rounded-xl shadow-md border-0 mb-4"
         style={{
           background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
           color: "white",
@@ -373,7 +380,6 @@ const PatientDashboard = () => {
             >
               Reschedule
             </Button>
-           
           </div>
         </div>
       </Card>
@@ -421,7 +427,6 @@ const PatientDashboard = () => {
 
               {appointment.status.toLowerCase() !== "cancelled" && (
                 <div className="mt-2 flex gap-2">
-                 
                   <Button
                     size="small"
                     type="primary"
@@ -579,262 +584,171 @@ const PatientDashboard = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <Card className="rounded-xl shadow-md mb-6 border-0">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
-            <div>
-              <Title level={2} style={{ margin: 0 }}>
-                Welcome, {patient?.name}
-              </Title>
-              <Text type="secondary">
-                Manage your appointments and health records
-              </Text>
-            </div>
-            <div className="mt-4 md:mt-0">
-              <Button
-                type="primary"
-                size="large"
-                icon={<ScheduleOutlined />}
-                onClick={() => setBookModalOpen(true)}
-              >
-                Book Appointment
-              </Button>
-            </div>
-          </div>
-
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={8}>
-              <Card className="rounded-xl shadow-sm border-0 h-full">
-                <Statistic
-                  title={
-                    <Text strong style={{ fontSize: 16 }}>
-                      Total Appointments
-                    </Text>
-                  }
-                  value={appointments.length}
-                  prefix={<ScheduleOutlined style={{ color: "#1890ff" }} />}
-                  valueStyle={{ color: "#1890ff", fontWeight: "bold" }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card className="rounded-xl shadow-sm border-0 h-full">
-                <Statistic
-                  title={
-                    <Text strong style={{ fontSize: 16 }}>
-                      Upcoming
-                    </Text>
-                  }
-                  value={
-                    appointments.filter(
-                      (a) =>
-                        a.status.toLowerCase() !== "cancelled" &&
-                        isAfter(
-                          parse(a.date, "dd-MM-yyyy", new Date()),
-                          new Date()
-                        )
-                    ).length
-                  }
-                  prefix={<RightCircleOutlined style={{ color: "#52c41a" }} />}
-                  valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card className="rounded-xl shadow-sm border-0 h-full">
-                <Statistic
-                  title={
-                    <Text strong style={{ fontSize: 16 }}>
-                      Pending
-                    </Text>
-                  }
-                  value={
-                    appointments.filter(
-                      (a) => a.status.toLowerCase() === "pending"
-                    ).length
-                  }
-                  prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
-                  valueStyle={{ color: "#faad14", fontWeight: "bold" }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        </Card>
-
-        <div className="mb-6">{renderNextAppointment()}</div>
-
-        <Card className="rounded-xl shadow-md mb-6 border-0">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-            <Title level={4} style={{ margin: 0 }}>
-              <ScheduleOutlined /> Your Appointments
-            </Title>
-            <Input
-              placeholder="Search by doctor name"
-              prefix={<SearchOutlined />}
-              style={{ width: 250 }}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="mt-2 md:mt-0"
-            />
-          </div>
-
-          {renderAppointmentsByStatus()}
-        </Card>
-      </motion.div>
-
-      {/* Book Appointment Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <ScheduleOutlined style={{ color: "#1890ff", fontSize: 20 }} />
-            <span>Book New Appointment</span>
-          </div>
-        }
-        open={bookModalOpen}
-        onCancel={() => {
-          setBookModalOpen(false);
-          bookForm.resetFields();
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={bookForm}
-          layout="vertical"
-          onFinish={handleBookAppointment}
-          className="mt-4"
+    <>
+      {contextHolder}
+      <AppHeader />
+      <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
         >
-          <Form.Item
-            name="doctorId"
-            label="Doctor"
-            rules={[{ required: true, message: "Please select a doctor" }]}
-          >
-            <Select
-              placeholder="Select a doctor"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {doctors.map((doctor) => (
-                <Option key={doctor.id} value={doctor.id}>
-                  {doctor.name}{" "}
-                  {doctor.specialization ? `(${doctor.specialization})` : ""}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+          <Card className="rounded-xl shadow-md mb-6 border-0">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
+              <div>
+                <Title level={2} style={{ margin: 0 }}>
+                  Welcome, {patient?.name}
+                </Title>
+                <Text type="secondary">
+                  Manage your appointments and health records
+                </Text>
+              </div>
+              <div className="mt-4 md:mt-0">
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<ScheduleOutlined />}
+                  onClick={() => setBookModalOpen(true)}
+                >
+                  Book Appointment
+                </Button>
+              </div>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="date"
-                label="Date"
-                rules={[{ required: true, message: "Please select a date" }]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD-MM-YYYY"
-                  disabledDate={(current) =>
-                    current && current < dayjs().startOf("day")
-                  }
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="time"
-                label="Time"
-                rules={[{ required: true, message: "Please select a time" }]}
-              >
-                <TimePicker
-                  style={{ width: "100%" }}
-                  format="h A"
-                  use12Hours
-                  minuteStep={30}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={8}>
+                <Card className="rounded-xl shadow-sm border-0 h-full">
+                  <Statistic
+                    title={
+                      <Text strong style={{ fontSize: 16 }}>
+                        Total Appointments
+                      </Text>
+                    }
+                    value={appointments.length}
+                    prefix={<ScheduleOutlined style={{ color: "#1890ff" }} />}
+                    valueStyle={{ color: "#1890ff", fontWeight: "bold" }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card className="rounded-xl shadow-sm border-0 h-full">
+                  <Statistic
+                    title={
+                      <Text strong style={{ fontSize: 16 }}>
+                        Upcoming
+                      </Text>
+                    }
+                    value={
+                      appointments.filter(
+                        (a) =>
+                          a.status.toLowerCase() !== "cancelled" &&
+                          isAfter(
+                            parse(a.date, "dd-MM-yyyy", new Date()),
+                            new Date()
+                          )
+                      ).length
+                    }
+                    prefix={
+                      <RightCircleOutlined style={{ color: "#52c41a" }} />
+                    }
+                    valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card className="rounded-xl shadow-sm border-0 h-full">
+                  <Statistic
+                    title={
+                      <Text strong style={{ fontSize: 16 }}>
+                        Pending
+                      </Text>
+                    }
+                    value={
+                      appointments.filter(
+                        (a) => a.status.toLowerCase() === "pending"
+                      ).length
+                    }
+                    prefix={
+                      <ClockCircleOutlined style={{ color: "#faad14" }} />
+                    }
+                    valueStyle={{ color: "#faad14", fontWeight: "bold" }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </Card>
 
-          <Form.Item
-            name="reason"
-            label="Reason for Visit"
-            rules={[{ required: true, message: "Please enter a reason" }]}
-          >
-            <Input.TextArea
-              rows={3}
-              placeholder="Describe your symptoms or reason for visit"
-            />
-          </Form.Item>
+          <div className="mb-6">{renderNextAppointment()}</div>
 
-          <Form.Item className="mb-0 flex justify-end">
-            <Space>
-              <Button
-                onClick={() => {
-                  setBookModalOpen(false);
-                  bookForm.resetFields();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="primary" htmlType="submit">
-                Book Appointment
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+          <Card className="rounded-xl shadow-md mb-6 border-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+              <Title level={4} style={{ margin: 0 }}>
+                <ScheduleOutlined /> Your Appointments
+              </Title>
+              <Input
+                placeholder="Search by doctor name"
+                prefix={<SearchOutlined />}
+                style={{ width: 250 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="mt-2 md:mt-0"
+              />
+            </div>
 
-      {/* Reschedule Appointment Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <EditOutlined style={{ color: "#faad14", fontSize: 20 }} />
-            <span>Reschedule Appointment</span>
-          </div>
-        }
-        open={rescheduleModalOpen}
-        onCancel={() => {
-          setRescheduleModalOpen(false);
-          rescheduleForm.resetFields();
-          setSelectedAppointment(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        {selectedAppointment && (
+            {renderAppointmentsByStatus()}
+          </Card>
+        </motion.div>
+
+        {/* Book Appointment Modal */}
+        <Modal
+          title={
+            <div className="flex items-center gap-2">
+              <ScheduleOutlined style={{ color: "#1890ff", fontSize: 20 }} />
+              <span>Book New Appointment</span>
+            </div>
+          }
+          open={bookModalOpen}
+          onCancel={() => {
+            setBookModalOpen(false);
+            bookForm.resetFields();
+          }}
+          footer={null}
+          width={600}
+        >
           <Form
-            form={rescheduleForm}
+            form={bookForm}
             layout="vertical"
-            onFinish={submitReschedule}
+            onFinish={handleBookAppointment}
             className="mt-4"
           >
-            <Alert
-              message="Reschedule Information"
-              description={`You are rescheduling your appointment with Dr. ${
-                selectedAppointment.doctor?.name || "Unknown"
-              }`}
-              type="info"
-              showIcon
-              className="mb-4"
-            />
-
-            <Form.Item name="doctorId" hidden>
-              <Input />
+            <Form.Item
+              name="doctorId"
+              label="Doctor"
+              rules={[{ required: true, message: "Please select a doctor" }]}
+            >
+              <Select
+                placeholder="Select a doctor"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
+                  0
+                }
+              >
+                {doctors.map((doctor) => (
+                  <Option key={doctor.id} value={doctor.id}>
+                    {doctor.name}{" "}
+                    {doctor.specialization ? `(${doctor.specialization})` : ""}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
                   name="date"
-                  label="New Date"
+                  label="Date"
                   rules={[{ required: true, message: "Please select a date" }]}
                 >
                   <DatePicker
@@ -849,7 +763,7 @@ const PatientDashboard = () => {
               <Col span={12}>
                 <Form.Item
                   name="time"
-                  label="New Time"
+                  label="Time"
                   rules={[{ required: true, message: "Please select a time" }]}
                 >
                   <TimePicker
@@ -877,22 +791,126 @@ const PatientDashboard = () => {
               <Space>
                 <Button
                   onClick={() => {
-                    setRescheduleModalOpen(false);
-                    rescheduleForm.resetFields();
-                    setSelectedAppointment(null);
+                    setBookModalOpen(false);
+                    bookForm.resetFields();
                   }}
                 >
                   Cancel
                 </Button>
                 <Button type="primary" htmlType="submit">
-                  Reschedule
+                  Book Appointment
                 </Button>
               </Space>
             </Form.Item>
           </Form>
-        )}
-      </Modal>
-    </div>
+        </Modal>
+
+        {/* Reschedule Appointment Modal */}
+        <Modal
+          title={
+            <div className="flex items-center gap-2">
+              <EditOutlined style={{ color: "#faad14", fontSize: 20 }} />
+              <span>Reschedule Appointment</span>
+            </div>
+          }
+          open={rescheduleModalOpen}
+          onCancel={() => {
+            setRescheduleModalOpen(false);
+            rescheduleForm.resetFields();
+            setSelectedAppointment(null);
+          }}
+          footer={null}
+          width={600}
+        >
+          {selectedAppointment && (
+            <Form
+              form={rescheduleForm}
+              layout="vertical"
+              onFinish={submitReschedule}
+              className="mt-4"
+            >
+              <Alert
+                message="Reschedule Information"
+                description={`You are rescheduling your appointment with Dr. ${
+                  selectedAppointment.doctor?.name || "Unknown"
+                }`}
+                type="info"
+                showIcon
+                className="mb-4"
+              />
+
+              <Form.Item name="doctorId" hidden>
+                <Input />
+              </Form.Item>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="date"
+                    label="New Date"
+                    rules={[
+                      { required: true, message: "Please select a date" },
+                    ]}
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      format="DD-MM-YYYY"
+                      disabledDate={(current) =>
+                        current && current < dayjs().startOf("day")
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="time"
+                    label="New Time"
+                    rules={[
+                      { required: true, message: "Please select a time" },
+                    ]}
+                  >
+                    <TimePicker
+                      style={{ width: "100%" }}
+                      format="h A"
+                      use12Hours
+                      minuteStep={30}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="reason"
+                label="Reason for Visit"
+                rules={[{ required: true, message: "Please enter a reason" }]}
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Describe your symptoms or reason for visit"
+                />
+              </Form.Item>
+
+              <Form.Item className="mb-0 flex justify-end">
+                <Space>
+                  <Button
+                    onClick={() => {
+                      setRescheduleModalOpen(false);
+                      rescheduleForm.resetFields();
+                      setSelectedAppointment(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="primary" htmlType="submit">
+                    Reschedule
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          )}
+        </Modal>
+      </div>
+    </>
   );
 };
 

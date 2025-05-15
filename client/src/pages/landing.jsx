@@ -1,10 +1,35 @@
 import { Button, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { api } from "../../api/axios";
+import { message } from "antd";
+import { useUser } from "../hooks/userUser";
 
 const { Title, Paragraph } = Typography;
 
 const Landing = () => {
   const navigate = useNavigate();
+  const [msg, contextHolder] = message.useMessage();
+  const { userdata, setUserData } = useUser();
+
+  useEffect(() => {
+    console.log("We ran bruh");
+    (async () => {
+      try {
+        const response = await api.get("/auth/me");
+        if (response?.data?.success) {
+          setUserData(response?.data?.data);
+          navigate(
+            response?.data?.data?.role === "DOCTOR" ? "/doctor" : "/patient"
+          );
+        } else {
+          setUserData({});
+        }
+      } catch (error) {
+        msg.error("Error fetching user session", 3);
+      }
+    })();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
