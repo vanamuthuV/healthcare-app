@@ -58,6 +58,8 @@ const addAppointment = async (req, res) => {
 const getAppointmentsPatient = async (req, res) => {
   const { id } = req.user;
 
+  console.log("You landed here");
+
   if (!id) {
     return sendResponse({
       data: null,
@@ -178,8 +180,6 @@ const getPatientProfileWithAppointments = async (req, res) => {
       status: 200,
       success: true,
     });
-
-    
   } catch (error) {
     console.error("Error fetching patient profile:", error);
     return sendResponse({
@@ -192,4 +192,40 @@ const getPatientProfileWithAppointments = async (req, res) => {
   }
 };
 
-export { addAppointment, getAppointmentsPatient, getPatientProfileWithAppointments };
+const getAllPatients = async (req, res) => {
+  try {
+    const patientsSnap = await db
+      .collection("users")
+      .where("role", "==", "PATIENT")
+      .get();
+
+    const patients = patientsSnap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return sendResponse({
+      data: patients,
+      message: "patients fetch success",
+      res,
+      status: 200,
+      success: true,
+    });
+  } catch (error) {
+    console.log(error.message);
+    return sendResponse({
+      data: null,
+      message: "failed to load patients",
+      res,
+      status: 500,
+      success: false,
+    });
+  }
+};
+
+export {
+  addAppointment,
+  getAppointmentsPatient,
+  getPatientProfileWithAppointments,
+  getAllPatients,
+};

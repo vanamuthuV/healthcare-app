@@ -1,9 +1,12 @@
 import { db } from "../config/firebase.config.js";
 import { sendResponse } from "../util/response.util.js";
+import { Timestamp } from "firebase-admin/firestore";
 
 const addAppointmentDoctor = async (req, res) => {
   const { id, role } = req.user;
   const { patientId, date, time, reason, status } = req.body;
+
+  console.log(patientId, date, time, reason, status);
 
   try {
     if (!id || !role || !patientId || !date || !time || !reason) {
@@ -19,12 +22,12 @@ const addAppointmentDoctor = async (req, res) => {
     await db.collection("appointments").add({
       patientId: patientId,
       doctorId: id,
-      date,
+      date: String(date),
       time,
       reason,
       status: status ? status : "PENDING",
-      createdAt: new Date().toISOString,
-      updatedAt: new Date().toISOString,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     });
 
     return sendResponse({
@@ -315,4 +318,59 @@ const updateAppointment = async (req, res) => {
   }
 };
 
-export { addAppointmentDoctor, getAppointmentsDoctor, getAllDoctors, cancelAppointment, updateAppointment };
+const deleteAppointment = async (req, res) => {
+  const { appointmentId } = req.params;
+
+  if (!appointmentId) {
+    return sendResponse({
+      data: null,
+      message: "Appointment id invalid",
+      res,
+      status: 404,
+      success: false,
+    });
+  }
+
+  try {
+    const appointmentRef = db.collection("appointments").doc(appointmentId);
+    const doc = await appointmentRef.get();
+
+    if (!doc.exists) {
+      return sendResponse({
+        data: null,
+        message: "Appointment not found",
+        res,
+        status: 404,
+        success: false,
+      });
+    }
+
+    await appointmentRef.delete();
+
+    return sendResponse({
+      data: null,
+      message: "Appointment delted success",
+      res,
+      status: 200,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error deleting appointment:", error);
+    return sendResponse({
+      data: null,
+      message: "cannot delete appointment",
+      res,
+      status: 500,
+      success: false,
+    });
+  }
+};
+
+export {
+  addAppointmentDoctor,
+  getAppointmentsDoctor,
+  getAllDoctors,
+  cancelAppointment,
+  updateAppointment,
+  deleteAppointment
+};
