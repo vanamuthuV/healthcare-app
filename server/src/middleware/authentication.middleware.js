@@ -1,8 +1,9 @@
-import { Verify } from "../util/jwt.util";
-import { sendResponse } from "../util/response.util";
+import { Verify } from "../util/jwt.util.js";
+import { sendResponse } from "../util/response.util.js";
 
 const Authentication = async (req, res, next) => {
   try {
+
     const token = req.cookies.token;
 
     if (!token) {

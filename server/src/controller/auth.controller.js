@@ -35,7 +35,7 @@ const registerController = async (req, res) => {
       });
     } else {
       const hashedPassword = await bcrypt.hash(
-        password,
+        String(password),
         parseInt(process.env.SALT_ROUND, 10)
       );
 
@@ -98,7 +98,7 @@ const loginController = async (req, res) => {
     const snap = user.docs[0];
     const document = { id: snap.id, ...snap.data() };
 
-    if (await bcrypt.compare(password, document.password)) {
+    if (await bcrypt.compare(String(password), document.password)) {
       const token = SignToken(document);
 
       delete document.password;
