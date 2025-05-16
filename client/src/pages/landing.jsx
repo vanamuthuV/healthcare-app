@@ -60,37 +60,47 @@ const Landing = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {contextHolder}
-
-      {/* Header */}
-      <motion.header
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex justify-between items-center px-8 md:px-16 py-5 bg-white shadow-md z-10"
-      >
-        <div className="flex items-center">
-          <HeartFilled
-            style={{ fontSize: 28, color: "#1890ff", marginRight: 10 }}
-          />
-          <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
-            HealthCare
-          </Title>
-        </div>
-        <div className="space-x-3 md:space-x-5">
-          <Button type="link" onClick={() => navigate("/login")} size="large">
-            Login
-          </Button>
-          <Button
-            type="primary"
-            onClick={() => navigate("/register")}
-            size="large"
-            shape="round"
-          >
-            Register
-          </Button>
-        </div>
-      </motion.header>
-
+      <div className="mb-8 sm:mb-10 md:mb-5">
+        <motion.header
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex justify-between items-center px-3 sm:px-8 md:px-16 py-2 sm:py-5 bg-white shadow-md z-10 w-full"
+        >
+          <div className="flex items-center">
+            <HeartFilled
+              style={{ fontSize: 20, color: "#1890ff", marginRight: 4 }}
+              className="sm:text-2xl sm:mr-2"
+            />
+            <Title
+              level={5}
+              className="m-0 text-sm sm:text-xl"
+              style={{ color: "#1890ff" }}
+            >
+              HealthCare
+            </Title>
+          </div>
+          <div className="flex space-x-1 sm:space-x-3 md:space-x-5">
+            <Button
+              type="link"
+              onClick={() => navigate("/login")}
+              size="small"
+              className="text-xs sm:text-sm sm:size-middle px-1 sm:px-3"
+            >
+              Login
+            </Button>
+            <Button
+              type="primary"
+              onClick={() => navigate("/register")}
+              size="small"
+              shape="round"
+              className="text-xs sm:text-sm sm:size-middle px-2 sm:px-4"
+            >
+              Register
+            </Button>
+          </div>
+        </motion.header>
+      </div>
       {/* Hero Section */}
       <div className="flex-1 flex items-center justify-center px-8 md:px-16 py-0">
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
