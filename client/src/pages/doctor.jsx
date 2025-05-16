@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -23,6 +24,11 @@ import {
   DatePicker,
   TimePicker,
   Popconfirm,
+  Tabs,
+  Calendar,
+  List,
+  Empty,
+  Alert,
 } from "antd";
 import { motion } from "framer-motion";
 import { api } from "../../api/axios";
@@ -39,15 +45,22 @@ import {
   MedicineBoxOutlined,
   ScheduleOutlined,
   ExclamationCircleOutlined,
+  SearchOutlined,
+  FileTextOutlined,
+  BellOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { useUser } from "../hooks/userUser";
 import AppHeader from "./appheader";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TabPane } = Tabs;
 
 const DoctorDashboard = () => {
   const [appointments, setAppointments] = useState([]);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -57,8 +70,13 @@ const DoctorDashboard = () => {
   const [editAppointmentModalVisible, setEditAppointmentModalVisible] =
     useState(false);
   const [currentAppointment, setCurrentAppointment] = useState(null);
+  const [searchText, setSearchText] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [newAppointmentForm] = Form.useForm();
   const [editAppointmentForm] = Form.useForm();
+
+  const { userdata } = useUser();
+  const doctorName = userdata?.name || "Doctor";
 
   const [msg, contextHolder] = message.useMessage();
 
@@ -67,13 +85,23 @@ const DoctorDashboard = () => {
     loadPatients();
   }, []);
 
+  console.log(selectedPatient)
+
+  useEffect(() => {
+    if (appointments.length > 0) {
+      filterAppointments(searchText, activeTab);
+    }
+  }, [searchText, activeTab, appointments]);
+
   const loadAppointments = async () => {
     try {
       setLoading(true);
       const response = await api.get("/doctor");
 
       if (response?.data?.success) {
-        setAppointments(response?.data?.data || []);
+        const appts = response?.data?.data || [];
+        setAppointments(appts);
+        setFilteredAppointments(appts);
       } else {
         msg.error(response?.data?.message, 3);
       }
@@ -93,6 +121,60 @@ const DoctorDashboard = () => {
     } catch (error) {
       msg.error("Failed to load patients", 3);
     }
+  };
+
+  const filterAppointments = (searchValue, tabKey) => {
+    let filtered = [...appointments];
+
+    if (searchValue) {
+      filtered = filtered.filter(
+        (appt) =>
+          appt.patient?.name
+            ?.toLowerCase()
+            .includes(searchValue.toLowerCase()) ||
+          appt.reason?.toLowerCase().includes(searchValue.toLowerCase())
+      );
+    }
+
+    // Filter by tab
+    switch (tabKey) {
+      case "upcoming":
+        filtered = filtered.filter(
+          (appt) =>
+            (appt.status.toLowerCase() === "confirmed" ||
+              appt.status.toLowerCase() === "pending") &&
+            dayjs(appt.date, "DD-MM-YYYY").isAfter(dayjs())
+        );
+        break;
+      case "completed":
+        filtered = filtered.filter(
+          (appt) => appt.status.toLowerCase() === "completed"
+        );
+        break;
+      case "pending":
+        filtered = filtered.filter(
+          (appt) => appt.status.toLowerCase() === "pending"
+        );
+        break;
+      case "cancelled":
+        filtered = filtered.filter(
+          (appt) =>
+            appt.status.toLowerCase() === "cancelled" ||
+            appt.status.toLowerCase() === "rejected"
+        );
+        break;
+      case "today":
+        filtered = filtered.filter((appt) =>
+          dayjs(appt.date, "DD-MM-YYYY").isSame(dayjs(), "day")
+        );
+        break;
+      case "all":
+        break;
+      default:
+        break;
+    }
+
+    setFilteredAppointments(filtered);
   };
 
   const handleViewPatient = async (patientId) => {
@@ -191,6 +273,9 @@ const DoctorDashboard = () => {
     (a) => a.status.toLowerCase() === "pending"
   ).length;
   const totalAppointments = appointments.length;
+  const todayAppointments = appointments.filter((a) =>
+    dayjs(a.date, "DD-MM-YYYY").isSame(dayjs(), "day")
+  ).length;
 
   const getStatusColor = (status) => {
     const statusLower = status.toLowerCase();
@@ -198,6 +283,7 @@ const DoctorDashboard = () => {
     if (statusLower === "pending") return "warning";
     if (statusLower === "cancelled" || statusLower === "rejected")
       return "error";
+    if (statusLower === "completed") return "blue";
     return "default";
   };
 
@@ -206,6 +292,7 @@ const DoctorDashboard = () => {
     { value: "CONFIRMED", label: "Confirmed" },
     { value: "REJECTED", label: "Rejected" },
     { value: "CANCELLED", label: "Cancelled" },
+    { value: "COMPLETED", label: "Completed" },
   ];
 
   const columns = [
@@ -233,6 +320,8 @@ const DoctorDashboard = () => {
           <Text>{date}</Text>
         </Space>
       ),
+      sorter: (a, b) =>
+        dayjs(a.date, "DD-MM-YYYY").unix() - dayjs(b.date, "DD-MM-YYYY").unix(),
     },
     {
       title: "Time",
@@ -270,6 +359,11 @@ const DoctorDashboard = () => {
           }
         />
       ),
+      filters: statusOptions.map((option) => ({
+        text: option.label,
+        value: option.value,
+      })),
+      onFilter: (value, record) => record.status.toUpperCase() === value,
     },
     {
       title: "Actions",
@@ -311,49 +405,145 @@ const DoctorDashboard = () => {
     },
   ];
 
+  const getTodaysAppointments = () => {
+    return appointments.filter((a) =>
+      dayjs(a.date, "DD-MM-YYYY").isSame(dayjs(), "day")
+    );
+  };
+
+  const getUpcomingAppointments = () => {
+    return appointments
+      .filter(
+        (a) =>
+          (a.status.toLowerCase() === "confirmed" ||
+            a.status.toLowerCase() === "pending") &&
+          dayjs(a.date, "DD-MM-YYYY").isAfter(dayjs())
+      )
+      .sort(
+        (a, b) =>
+          dayjs(a.date, "DD-MM-YYYY").unix() -
+          dayjs(b.date, "DD-MM-YYYY").unix()
+      )
+      .slice(0, 5);
+  };
+
+  const renderAppointmentItem = (item) => (
+    <List.Item>
+      <Card className="w-full shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center">
+            <Avatar
+              icon={<UserOutlined />}
+              style={{ backgroundColor: "#1890ff" }}
+            />
+            <div className="ml-3">
+              <Text strong>{item.patient?.name}</Text>
+              <div className="text-gray-500 text-sm">
+                <CalendarOutlined className="mr-1" /> {item.date}{" "}
+                <ClockCircleOutlined className="ml-2 mr-1" /> {item.time}
+              </div>
+            </div>
+          </div>
+          <Badge
+            status={getStatusColor(item.status)}
+            text={
+              <Text strong style={{ textTransform: "capitalize" }}>
+                {item.status.toLowerCase()}
+              </Text>
+            }
+          />
+        </div>
+        {item.reason && (
+          <div className="mt-2">
+            <Text type="secondary">
+              <MedicineBoxOutlined className="mr-1" /> {item.reason}
+            </Text>
+          </div>
+        )}
+        <div className="mt-3 flex justify-end">
+          <Space>
+            <Button
+              size="small"
+              type="primary"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewPatient(item.patientId)}
+            >
+              View
+            </Button>
+            <Button
+              size="small"
+              type="default"
+              icon={<EditOutlined />}
+              onClick={() => handleEditAppointment(item)}
+              style={{ backgroundColor: "#faad14", color: "white" }}
+            >
+              Edit
+            </Button>
+          </Space>
+        </div>
+      </Card>
+    </List.Item>
+  );
+
+  const dateCellRender = (value) => {
+    const dateStr = value.format("DD-MM-YYYY");
+    const listData = appointments.filter((item) => item.date === dateStr);
+
+    return (
+      <ul className="events p-0 m-0 list-none">
+        {listData.map((item) => (
+          <li key={item.id} className="mb-1">
+            <Badge
+              status={getStatusColor(item.status)}
+              text={
+                <Text className="text-xs">
+                  {item.time} - {item.patient?.name}
+                </Text>
+              }
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <>
       {contextHolder}
       <AppHeader />
-      <div className="pt-4 px-2 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="pt-4  px-2 md:px-6 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <Card
-            className="rounded-xl shadow-md mb-6 border-0"
-            style={{
-              background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
-            }}
-          >
-            <div className="flex items-center justify-between">
+          <Card className="rounded-xl shadow-md mb-6 border-0">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
               <div>
-                <Title level={2} style={{ margin: 0, color: "white" }}>
-                  Doctor Dashboard
+                <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
+                  Welcome, Dr. {doctorName}
                 </Title>
-                <Text style={{ color: "rgba(255, 255, 255, 0.85)" }}>
-                  Manage your appointments and patient information
+                <Text type="secondary">
+                  {dayjs().format("dddd, MMMM D, YYYY")} • You have{" "}
+                  {todayAppointments} appointments today
                 </Text>
               </div>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreateAppointment}
-                size="large"
-                style={{
-                  background: "white",
-                  color: "#1890ff",
-                  borderColor: "white",
-                }}
-              >
-                New Appointment
-              </Button>
+              <div className="mt-4 md:mt-0">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreateAppointment}
+                  size="large"
+                  className="rounded-lg"
+                >
+                  New Appointment
+                </Button>
+              </div>
             </div>
           </Card>
 
           <Row gutter={[16, 16]} className="mb-6 mt-4">
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12} md={6}>
               <Card className="rounded-xl shadow-sm border-0 h-full">
                 <Statistic
                   title={
@@ -367,7 +557,21 @@ const DoctorDashboard = () => {
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12} md={6}>
+              <Card className="rounded-xl shadow-sm border-0 h-full">
+                <Statistic
+                  title={
+                    <Text strong style={{ fontSize: 16 }}>
+                      Today
+                    </Text>
+                  }
+                  value={todayAppointments}
+                  prefix={<CalendarOutlined style={{ color: "#722ed1" }} />}
+                  valueStyle={{ color: "#722ed1", fontWeight: "bold" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
               <Card className="rounded-xl shadow-sm border-0 h-full">
                 <Statistic
                   title={
@@ -381,7 +585,7 @@ const DoctorDashboard = () => {
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12} md={6}>
               <Card className="rounded-xl shadow-sm border-0 h-full">
                 <Statistic
                   title={
@@ -397,24 +601,195 @@ const DoctorDashboard = () => {
             </Col>
           </Row>
 
+          <Row gutter={[16, 16]} className="mb-6">
+            <Col xs={24} lg={16}>
+              <Card
+                title={
+                  <div className="flex items-center">
+                    <BellOutlined
+                      style={{ color: "#1890ff", marginRight: 8 }}
+                    />
+                    <span>Today's Appointments</span>
+                  </div>
+                }
+                className="rounded-xl shadow-md border-0 h-full"
+                extra={
+                  <Button type="link" onClick={() => setActiveTab("today")}>
+                    View All
+                  </Button>
+                }
+              >
+                {loading ? (
+                  <div className="text-center py-8">
+                    <Spin size="large" />
+                  </div>
+                ) : getTodaysAppointments().length > 0 ? (
+                  <List
+                    dataSource={getTodaysAppointments()}
+                    renderItem={renderAppointmentItem}
+                    itemLayout="vertical"
+                    pagination={
+                      getTodaysAppointments().length > 3
+                        ? { pageSize: 3 }
+                        : false
+                    }
+                  />
+                ) : (
+                  <Empty description="No appointments scheduled for today" />
+                )}
+              </Card>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Card
+                title={
+                  <div className="flex items-center">
+                    <ScheduleOutlined
+                      style={{ color: "#1890ff", marginRight: 8 }}
+                    />
+                    <span>Upcoming Appointments</span>
+                  </div>
+                }
+                className="rounded-xl shadow-md border-0 h-full"
+                extra={
+                  <Button type="link" onClick={() => setActiveTab("upcoming")}>
+                    View All
+                  </Button>
+                }
+              >
+                {loading ? (
+                  <div className="text-center py-8">
+                    <Spin size="large" />
+                  </div>
+                ) : getUpcomingAppointments().length > 0 ? (
+                  <List
+                    size="small"
+                    dataSource={getUpcomingAppointments()}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <List.Item.Meta
+                          avatar={
+                            <Avatar
+                              icon={<UserOutlined />}
+                              style={{ backgroundColor: "#1890ff" }}
+                            />
+                          }
+                          title={<Text strong>{item.patient?.name}</Text>}
+                          description={
+                            <Space direction="vertical" size={0}>
+                              <Text type="secondary">
+                                <CalendarOutlined className="mr-1" />{" "}
+                                {item.date} at {item.time}
+                              </Text>
+                              {item.reason && (
+                                <Text type="secondary">
+                                  <MedicineBoxOutlined className="mr-1" />{" "}
+                                  {item.reason}
+                                </Text>
+                              )}
+                            </Space>
+                          }
+                        />
+                        <Badge status={getStatusColor(item.status)} />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Empty description="No upcoming appointments" />
+                )}
+              </Card>
+            </Col>
+          </Row>
+
           <Card className="rounded-xl shadow-md border-0">
-            <Title level={4} className="mb-4">
-              <ScheduleOutlined /> Upcoming Appointments
-            </Title>
-            {loading ? (
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+              <Title level={4} style={{ margin: 0 }}>
+                <FileTextOutlined /> Appointment Management
+              </Title>
+              <div className="mt-3 md:mt-0 w-full md:w-auto">
+                <Input
+                  placeholder="Search by patient name or reason"
+                  prefix={<SearchOutlined />}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  style={{ width: "100%", maxWidth: "300px" }}
+                  allowClear
+                />
+              </div>
+            </div>
+
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              className="mb-4"
+            >
+              <TabPane
+                tab={
+                  <span>
+                    <CalendarOutlined /> Today
+                  </span>
+                }
+                key="today"
+              />
+              <TabPane
+                tab={
+                  <span>
+                    <ScheduleOutlined /> Upcoming
+                  </span>
+                }
+                key="upcoming"
+              />
+              <TabPane
+                tab={
+                  <span>
+                    <CheckCircleOutlined /> Completed
+                  </span>
+                }
+                key="completed"
+              />
+              <TabPane
+                tab={
+                  <span>
+                    <ClockCircleOutlined /> Pending
+                  </span>
+                }
+                key="pending"
+              />
+              <TabPane
+                tab={
+                  <span>
+                    <DeleteOutlined /> Cancelled
+                  </span>
+                }
+                key="cancelled"
+              />
+              <TabPane
+                tab={
+                  <span>
+                    <FilterOutlined /> All
+                  </span>
+                }
+                key="all"
+              />
+            </Tabs>
+
+            {activeTab === "calendar" ? (
+              <Calendar dateCellRender={dateCellRender} />
+            ) : loading ? (
               <div className="text-center py-12">
                 <Spin size="large" />
               </div>
-            ) : (
+            ) : filteredAppointments.length > 0 ? (
               <Table
                 columns={columns}
-                dataSource={appointments}
+                dataSource={filteredAppointments}
                 rowKey="id"
-                pagination={{ pageSize: 6 }}
+                pagination={{ pageSize: 10 }}
                 className="overflow-x-auto"
                 rowClassName="hover:bg-blue-50 transition-colors"
                 bordered={false}
               />
+            ) : (
+              <Empty description={`No ${activeTab} appointments found`} />
             )}
           </Card>
         </motion.div>
@@ -496,7 +871,7 @@ const DoctorDashboard = () => {
               <Divider orientation="left">Appointment History</Divider>
 
               <Timeline
-                mode="center"
+                mode="left"
                 items={selectedPatient.appointments?.map((a) => ({
                   color: getStatusColor(a.status),
                   label: `${a.date} at ${a.time}`,
@@ -505,6 +880,10 @@ const DoctorDashboard = () => {
                       <div>
                         <Text strong>Reason: </Text>
                         <Text>{a.reason}</Text>
+                      </div>
+                      <div>
+                        <Text strong>Doctor: </Text>
+                        <Text>Dr. {a.doctorName}</Text>
                       </div>
                       <div>
                         <Text strong>Status: </Text>
@@ -663,6 +1042,13 @@ const DoctorDashboard = () => {
               onFinish={submitEditAppointment}
               className="mt-4"
             >
+              <Alert
+                message={`Editing appointment for ${currentAppointment.patient?.name}`}
+                type="info"
+                showIcon
+                className="mb-4"
+              />
+
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item

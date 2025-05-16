@@ -13,6 +13,13 @@ server.use(cors(corsOptions));
 server.use(express.json());
 server.use(cookieParser());
 
+server.use("/", (req, res) => {
+  res.status(200).json({
+    Healthy: true,
+    message: "Server is rocking",
+  });
+});
+
 server.use("/api", Hub);
 
 server.listen(process.env.PORT, () => {

@@ -189,9 +189,6 @@ const AppHeader = () => {
                 <Descriptions.Item label="Email">
                   {userdata?.email || "Not Available"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Age">
-                  {userdata?.age || "Not Available"}
-                </Descriptions.Item>
                 {userdata?.specialization && (
                   <Descriptions.Item label="Specialization">
                     {userdata.specialization}
@@ -203,7 +200,7 @@ const AppHeader = () => {
 
           <Divider />
 
-          <div className="flex justify-center">
+          {/* <div className="flex justify-center">
             <Button
               type="primary"
               icon={<UserOutlined />}
@@ -216,7 +213,7 @@ const AppHeader = () => {
             >
               Edit Profile
             </Button>
-          </div>
+          </div> */}
         </div>
       </Modal>
 

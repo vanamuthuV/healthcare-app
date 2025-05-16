@@ -136,6 +136,63 @@ const getAppointmentsPatient = async (req, res) => {
   }
 };
 
+// const getPatientProfileWithAppointments = async (req, res) => {
+//   const { patientId } = req.params;
+
+//   if (!patientId) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Patient ID is required",
+//     });
+//   }
+
+//   try {
+//     const userDoc = await db.collection("users").doc(patientId).get();
+
+//     if (!userDoc.exists) {
+//       return sendResponse({
+//         data: null,
+//         message: "patient not found",
+//         res,
+//         status: 404,
+//         success: false,
+//       });
+//     }
+
+//     const patientData = { id: userDoc.id, ...userDoc.data() };
+
+//     const snapshot = await db
+//       .collection("appointments")
+//       .where("patientId", "==", patientId)
+//       .get();
+
+//     const appointments = [];
+//     snapshot.forEach((doc) => {
+//       appointments.push({ id: doc.id, ...doc.data() });
+//     });
+
+//     return sendResponse({
+//       data: {
+//         patient: patientData,
+//         appointments,
+//       },
+//       message: "patient fetch success",
+//       res,
+//       status: 200,
+//       success: true,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching patient profile:", error);
+//     return sendResponse({
+//       data: null,
+//       message: "failed to fetch patiet profile",
+//       res,
+//       status: 500,
+//       success: false,
+//     });
+//   }
+// };
+
 const getPatientProfileWithAppointments = async (req, res) => {
   const { patientId } = req.params;
 
@@ -152,7 +209,7 @@ const getPatientProfileWithAppointments = async (req, res) => {
     if (!userDoc.exists) {
       return sendResponse({
         data: null,
-        message: "patient not found",
+        message: "Patient not found",
         res,
         status: 404,
         success: false,
@@ -167,16 +224,42 @@ const getPatientProfileWithAppointments = async (req, res) => {
       .get();
 
     const appointments = [];
+    const doctorIdsSet = new Set();
+
     snapshot.forEach((doc) => {
-      appointments.push({ id: doc.id, ...doc.data() });
+      const appointmentData = doc.data();
+      if (appointmentData.doctorId) {
+        doctorIdsSet.add(appointmentData.doctorId);
+      }
+      appointments.push({ id: doc.id, ...appointmentData });
     });
+    
+    const doctorIds = Array.from(doctorIdsSet);
+    const doctorMap = {};
+
+    await Promise.all(
+      doctorIds.map(async (doctorId) => {
+        const docRef = await db.collection("users").doc(doctorId).get();
+        if (docRef.exists) {
+          const doctorData = docRef.data();
+          doctorMap[doctorId] = doctorData.name || "Unknown Doctor";
+        } else {
+          doctorMap[doctorId] = "Unknown Doctor";
+        }
+      })
+    );
+
+    const enrichedAppointments = appointments.map((appt) => ({
+      ...appt,
+      doctorName: doctorMap[appt.doctorId] || "Unknown Doctor",
+    }));
 
     return sendResponse({
       data: {
         patient: patientData,
-        appointments,
+        appointments: enrichedAppointments,
       },
-      message: "patient fetch success",
+      message: "Patient fetch success",
       res,
       status: 200,
       success: true,
@@ -185,13 +268,14 @@ const getPatientProfileWithAppointments = async (req, res) => {
     console.error("Error fetching patient profile:", error);
     return sendResponse({
       data: null,
-      message: "failed to fetch patiet profile",
+      message: "Failed to fetch patient profile",
       res,
       status: 500,
       success: false,
     });
   }
 };
+
 
 const getAllPatients = async (req, res) => {
   try {

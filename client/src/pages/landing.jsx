@@ -1,9 +1,13 @@
-import { Button, Typography } from "antd";
+"use client";
+
+import { Button, Typography, Carousel } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { api } from "../../api/axios";
 import { message } from "antd";
 import { useUser } from "../hooks/userUser";
+import { motion } from "framer-motion";
+import { HeartFilled } from "@ant-design/icons";
 
 const { Title, Paragraph } = Typography;
 
@@ -12,9 +16,29 @@ const Landing = () => {
   const [msg, contextHolder] = message.useMessage();
   const { userdata, setUserData } = useUser();
 
+  // Health quotes for the carousel
+  const healthQuotes = [
+    {
+      quote: "The greatest wealth is health.",
+      author: "Virgil",
+    },
+    {
+      quote: "Health is not valued until sickness comes.",
+      author: "Thomas Fuller",
+    },
+    {
+      quote: "Take care of your body. It's the only place you have to live.",
+      author: "Jim Rohn",
+    },
+    {
+      quote:
+        "Health is a state of complete harmony of the body, mind, and spirit.",
+      author: "B.K.S. Iyengar",
+    },
+  ];
+
   useEffect(() => {
-    console.log("We ran bruh");
-    (async () => {
+    const checkUserSession = async () => {
       try {
         const response = await api.get("/auth/me");
         if (response?.data?.success) {
@@ -26,60 +50,142 @@ const Landing = () => {
           setUserData({});
         }
       } catch (error) {
-        msg.error("Error fetching user session", 3);
+        console.error("Session check error:", error);
       }
-    })();
+    };
+
+    checkUserSession();
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+      {contextHolder}
+
       {/* Header */}
-      <header className="flex justify-between items-center px-6 py-4 bg-white shadow-md">
-        <h1 className="text-2xl font-bold text-blue-600">HealthCare</h1>
-        <div className="space-x-4">
-          <Button type="link" onClick={() => navigate("/login")}>
+      <motion.header
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="flex justify-between items-center px-8 md:px-16 py-5 bg-white shadow-md z-10"
+      >
+        <div className="flex items-center">
+          <HeartFilled
+            style={{ fontSize: 28, color: "#1890ff", marginRight: 10 }}
+          />
+          <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
+            HealthCare
+          </Title>
+        </div>
+        <div className="space-x-3 md:space-x-5">
+          <Button type="link" onClick={() => navigate("/login")} size="large">
             Login
           </Button>
-          <Button type="primary" onClick={() => navigate("/register")}>
+          <Button
+            type="primary"
+            onClick={() => navigate("/register")}
+            size="large"
+            shape="round"
+          >
             Register
           </Button>
         </div>
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
-      <main className="flex-1 flex flex-col md:flex-row items-center justify-between px-6 md:px-20 py-16 bg-gray-100">
-        {/* Left Text */}
-        <div className="md:w-1/2 text-center md:text-left space-y-6">
-          <Title className="!text-4xl md:!text-5xl font-bold">
-            Trusted Healthcare at Your Fingertips
-          </Title>
-          <Paragraph className="text-lg text-gray-700">
-            Book appointments, manage your health records, and connect with
-            certified doctors — all in one platform.
-          </Paragraph>
-          <Button
-            type="primary"
-            size="large"
-            onClick={() => navigate("/register")}
+      <div className="flex-1 flex items-center justify-center px-8 md:px-16 py-0">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+          {/* Left Text */}
+          <motion.div
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-center md:text-left space-y-8"
           >
-            Get Started
-          </Button>
-        </div>
+            <Title
+              className="!text-4xl md:!text-5xl lg:!text-6xl font-bold !leading-tight"
+              style={{ color: "#1890ff" }}
+            >
+              Your Health, Our Priority
+            </Title>
+            <Paragraph className="text-lg md:text-xl text-gray-700">
+              Experience healthcare reimagined. Book appointments, manage your
+              health records, and connect with certified doctors — all in one
+              seamless platform.
+            </Paragraph>
+            <div className="pt-6">
+              <Button
+                type="primary"
+                size="large"
+                shape="round"
+                onClick={() => navigate("/register")}
+                style={{
+                  height: 50,
+                  fontSize: 16,
+                  paddingLeft: 30,
+                  paddingRight: 30,
+                }}
+              >
+                Get Started
+              </Button>
+            </div>
 
-        {/* Right Image */}
-        <div className="mt-10 md:mt-0 md:w-1/2 flex justify-center">
-          <img
-            src="https://cdn.dribbble.com/users/292037/screenshots/14913845/media/f4a5bdb1eab64d99e3f6aef6c1d26800.png"
-            alt="Healthcare Illustration"
-            className="w-full max-w-sm"
-          />
+            {/* Quotes Carousel */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="mt-12 pt-4 max-w-lg mx-auto md:mx-0"
+            >
+              <Carousel
+                autoplay
+                effect="fade"
+                dots={false}
+                autoplaySpeed={5000}
+              >
+                {healthQuotes.map((item, index) => (
+                  <div key={index} className="py-2">
+                    <p className="text-lg italic text-gray-600">
+                      "{item.quote}"
+                    </p>
+                    <p className="text-right text-gray-500 mt-2">
+                      — {item.author}
+                    </p>
+                  </div>
+                ))}
+              </Carousel>
+            </motion.div>
+          </motion.div>
+
+          {/* Right Image */}
+          <motion.div
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="flex justify-center"
+          >
+            <img
+              src="https://img.freepik.com/free-vector/doctors-concept-illustration_114360-1515.jpg"
+              alt="Healthcare Illustration"
+              className="w-full max-w-lg"
+            />
+          </motion.div>
         </div>
-      </main>
+      </div>
 
       {/* Footer */}
-      <footer className="text-center text-sm py-6 text-gray-600 bg-white shadow-inner">
-        © 2025 HealthCare. All rights reserved.
-      </footer>
+      <motion.footer
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 1 }}
+        className="text-center py-6 text-gray-600 bg-white shadow-inner"
+      >
+        <div className="flex justify-center items-center gap-2">
+          <HeartFilled
+            style={{ fontSize: 16, color: "#1890ff", marginRight: 4 }}
+          />
+          <span>© 2025 HealthCare. All rights reserved.</span>
+        </div>
+      </motion.footer>
     </div>
   );
 };

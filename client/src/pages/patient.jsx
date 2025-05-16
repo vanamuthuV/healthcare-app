@@ -587,7 +587,7 @@ const PatientDashboard = () => {
     <>
       {contextHolder}
       <AppHeader />
-      <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+      <div className="pt-2 px-2 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

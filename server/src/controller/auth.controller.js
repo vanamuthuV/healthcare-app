@@ -123,7 +123,7 @@ const loginController = async (req, res) => {
         message: "incorrect password",
         res,
         status: 200,
-        success: true,
+        success: false,
       });
     }
   } catch (error) {
