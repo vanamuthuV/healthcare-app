@@ -7,7 +7,7 @@ A full-stack healthcare application built with React.js and Express.js. It enabl
 
 ## Tech Stack
 
-- **Frontend:** React.js
+- **Frontend:** React.js with Ant Design for UI components
 - **Backend:** Express.js (Node.js)
 - **Database:** Firebase Firestore
 - **Authentication:** JWT (JSON Web Tokens)
