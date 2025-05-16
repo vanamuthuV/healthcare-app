@@ -4,6 +4,7 @@ import { Hub } from "./src/routes/index.route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { corsOptions } from "./src/config/cors.config.js";
+import ServerlessHttp from "serverless-http";
 
 dotenv.config();
 
@@ -22,6 +23,8 @@ server.use("/", (req, res) => {
 
 server.use("/api", Hub);
 
-server.listen(process.env.PORT, () => {
-  console.log(`server is running on port ${process.env.PORT}`);
-});
+// server.listen(process.env.PORT, () => {
+//   console.log(`server is running on port ${process.env.PORT}`);
+// });
+
+export const handler = serverless(server);
