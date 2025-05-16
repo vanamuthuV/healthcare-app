@@ -27,4 +27,4 @@ server.use("/api", Hub);
 //   console.log(`server is running on port ${process.env.PORT}`);
 // });
 
-export const handler = serverless(server);
+export const handler = ServerlessHttp(server);
