@@ -1,4 +1,3 @@
-
 import { Form, Input, Button, Typography, message, Card, Divider } from "antd";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +9,8 @@ import {
   HeartFilled,
   ArrowLeftOutlined,
 } from "@ant-design/icons";
+import { useState } from "react";
+import { Loader, Loader2 } from "lucide-react";
 
 const { Title, Text, Link } = Typography;
 
@@ -17,9 +18,11 @@ const Login = () => {
   const navigate = useNavigate();
   const [msg, contextHolder] = message.useMessage();
   const { userdata, setUserData } = useUser();
+  const [loading, setLoading] = useState(false);
 
   const onFinish = async (values) => {
     try {
+      setLoading(true);
       const response = await api.post("/auth/login", values);
       if (response?.data?.success) {
         msg.success(response?.data?.message, 3);
@@ -33,13 +36,15 @@ const Login = () => {
 
         return () => clearTimeout(delay);
       } else {
-        msg.error(response?.data?.message, 3)
+        msg.error(response?.data?.message, 3);
       }
     } catch (error) {
       console.log(error.message);
       msg.error(
         error?.response?.data?.message || "Login failed. Please try again."
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -161,9 +166,10 @@ const Login = () => {
                   type="primary"
                   htmlType="submit"
                   size="large"
-                  className="w-full rounded-lg h-14 text-lg"
+                  className="w-full rounded-lg h-14 text-lg flex items-center justify-center"
                 >
                   Login
+                  {loading && <Loader2 className="animate-spin ml-2" />}
                 </Button>
               </Form.Item>
             </Form>
