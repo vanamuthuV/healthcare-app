@@ -12,6 +12,7 @@ const server = express();
 server.use(cors(corsOptions));
 server.use(express.json());
 server.use(cookieParser());
+server.use("/api", Hub);
 
 server.use("/", (req, res) => {
   res.status(200).json({
@@ -19,8 +20,6 @@ server.use("/", (req, res) => {
     message: "Server is rocking",
   });
 });
-
-server.use("/api", Hub);
 
 server.listen(process.env.PORT, () => {
   console.log(`server is running on port ${process.env.PORT}`);
