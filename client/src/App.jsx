@@ -4,14 +4,11 @@ import Login from "./pages/login";
 import RegistrationForm from "./pages/registration";
 import DoctorDashboard from "./pages/doctor";
 import PatientDashboard from "./pages/patient";
-import { useUser } from "./hooks/userUser";
 import ProtectedRoute from "./util/protectedRotue";
 
 function App() {
-  const { userdata, setUserData } = useUser();
-
   return (
-    <>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -38,7 +35,7 @@ function App() {
         />
         {/* <Route path="/doctor" element={<DoctorDashboard />} /> */}
       </Routes>
-    </>
+    </BrowserRouter>
   );
 }
 
